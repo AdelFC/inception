@@ -10,8 +10,8 @@ RESET		= \033[0m
 
 # ================================= VARIABLES ================================ #
 NAME		= inception
-COMPOSE		= docker compose -f srcs/docker-compose.yml --env-file .env
-DATA_PATH	= /home/afc/data
+COMPOSE		= docker-compose -f srcs/docker-compose.yml --env-file srcs/.env
+DATA_PATH	= srcs/volumes
 
 # ================================== RULES =================================== #
 
@@ -24,7 +24,7 @@ build:
 
 up:
 	@echo "$(CYAN)Creating data directories...$(RESET)"
-	@mkdir -p $(DATA_PATH)/mariadb $(DATA_PATH)/wordpress
+	@mkdir -p $(DATA_PATH)/mariadb_data $(DATA_PATH)/wordpress_data
 	@echo "$(CYAN)Starting containers...$(RESET)"
 	@$(COMPOSE) up -d
 	@echo "$(BOLD_GREEN)All services started!$(RESET)"
@@ -38,19 +38,23 @@ down:
 logs:
 	@$(COMPOSE) logs -f
 
-ps:
-	@$(COMPOSE) ps
-
 clean:
 	@echo "$(YELLOW)Cleaning containers and volumes...$(RESET)"
-	@$(COMPOSE) down -v --remove-orphans
+	@$(COMPOSE) down --remove-orphans
 	@echo "$(YELLOW)Clean complete.$(RESET)"
 
 fclean: clean
+	@echo "$(BOLD_RED)Removing Docker volumes...$(RESET)"
+	@docker volume rm srcs_mariadb_data srcs_wordpress_data 2>/dev/null || true
 	@echo "$(BOLD_RED)Removing all data...$(RESET)"
-	@sudo rm -rf $(DATA_PATH)/mariadb/* $(DATA_PATH)/wordpress/*
+	@if [ -d "$(DATA_PATH)/mariadb_data" ] && [ "$$(ls -A $(DATA_PATH)/mariadb_data 2>/dev/null)" ]; then \
+		docker run --rm -v $(shell pwd)/$(DATA_PATH)/mariadb_data:/data alpine sh -c "rm -rf /data/* /data/.[!.]* 2>/dev/null || true"; \
+	fi
+	@if [ -d "$(DATA_PATH)/wordpress_data" ] && [ "$$(ls -A $(DATA_PATH)/wordpress_data 2>/dev/null)" ]; then \
+		docker run --rm -v $(shell pwd)/$(DATA_PATH)/wordpress_data:/data alpine sh -c "rm -rf /data/* /data/.[!.]* 2>/dev/null || true"; \
+	fi
 	@echo "$(BOLD_RED)Full clean complete.$(RESET)"
 
 re: fclean all
 
-.PHONY: all build up down logs ps clean fclean re
+.PHONY: all build up down logs clean fclean re
