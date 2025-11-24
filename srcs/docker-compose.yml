@@ -1,59 +1,68 @@
+name: 'inception'
+
 services:
   mariadb:
-    build: requirements/mariadb
-    image: mariadb
     container_name: mariadb
-    volumes:
-      - mariadb_data:/var/lib/mysql
+    build: ./requirements/mariadb
+    image: mariadb
     expose:
       - "3306"
-    env_file: .env
+    env_file:
+      - .env
+    volumes:
+      - mariadb_data:/var/lib/mysql
     networks:
       - inception
-    restart: on-failure
+    restart: always
 
   wordpress:
-    build: requirements/wordpress
-    image: wordpress
     container_name: wordpress
-    volumes:
-      - wordpress_data:/var/www/html
+    build: ./requirements/wordpress
+    image: wordpress
     depends_on:
       - mariadb
-    env_file: .env
-    networks:
-      - inception
     expose:
       - "9000"
-    restart: on-failure
-
-  nginx:
-    build: requirements/nginx
-    image: nginx
-    container_name: nginx
+    env_file:
+      - .env
     volumes:
       - wordpress_data:/var/www/html
-    ports:
-      - "443:443"
     networks:
       - inception
+    restart: always
+
+  nginx:
+    container_name: nginx
+    build: ./requirements/nginx
+    image: nginx
     depends_on:
       - wordpress
-    restart: on-failure
+    env_file:
+      - .env
+    ports:
+      - "443:443"
+    volumes:
+      - wordpress_data:/var/www/html
+    networks:
+      - inception
+    restart: always
 
 networks:
   inception:
+    name: inception
     driver: bridge
 
 volumes:
   mariadb_data:
+    driver: local
     driver_opts:
       type: none
+      device: /home/afodil-c/data/mariadb
       o: bind
-      device: /home/afc/Desktop/42/inception/srcs/volumes/mariadb_data
 
   wordpress_data:
+    driver: local
     driver_opts:
       type: none
+      device: /home/afodil-c/data/wordpress
       o: bind
-      device: /home/afc/Desktop/42/inception/srcs/volumes/wordpress_data

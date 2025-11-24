@@ -1,47 +1,52 @@
 #!/bin/bash
 
-# Télécharger WordPress si le volume est vide
-if [ ! -f /var/www/html/wp-login.php ]; then
-    wp core download --allow-root
-fi
-
-TIMEOUT=60
-COUNT=0
-until mysqladmin ping -h mariadb --silent || [ $COUNT -eq $TIMEOUT ]; do
-    sleep 1
-    COUNT=$((COUNT+1))
+echo "Inception: Waiting for MariaDB to be ready..."
+until mariadb -hmariadb -u${DB_ADMIN_NAME} -p${DB_ADMIN_PWD} -e "SELECT 1;" > /dev/null 2>&1; do
+    echo "MariaDB not ready yet, retrying in 2s..."
+    sleep 2
 done
+echo "MariaDB is ready, continuing WordPress setup."
 
-if [ $COUNT -eq $TIMEOUT ]; then
-    echo "Error: MariaDB timeout after $TIMEOUT seconds"
-    exit 1
+WP_PATH=/var/www/html
+
+if ! [ -d $WP_PATH ]; then
+    echo "Inception: Download core WordPress"
+    wp core download --path=$WP_PATH --allow-root
 fi
 
-# Attendre que MariaDB soit vraiment prêt (pas juste ping)
-echo "Waiting for MariaDB to be fully ready..."
-sleep 5
+cd $WP_PATH;
 
-if [ ! -f /var/www/html/wp-config.php ]; then
-    wp config create \
-        --dbname=${DB_NAME} \
-        --dbuser=${DB_ADMIN_NAME} \
-        --dbpass=${DB_ADMIN_PWD} \
-        --dbhost=mariadb \
-        --allow-root
+if [ -f wp-config.php ] && wp core is-installed --allow-root; then
+    echo "Inception: WordPress already installed"
+else
+    cp wp-config-sample.php wp-config.php
 
-    wp core install \
+    wp config set --allow-root DB_HOST mariadb --path="."
+    wp config set --allow-root DB_NAME ${DB_NAME} --path="."
+    wp config set --allow-root DB_USER ${DB_ADMIN_NAME} --path="."
+    wp config set --allow-root DB_PASSWORD "${DB_ADMIN_PWD}" --path="." --quiet
+
+    wp config set --allow-root WP_DEBUG false --path="." --raw
+    wp config set --allow-root WP_DEBUG_LOG false --path="." --raw
+
+    wp config shuffle-salts --allow-root
+
+    echo "wp-config.php file generated"
+
+    echo "Installing WordPress"
+    wp core install --allow-root \
+        --path="." \
         --url=https://${DOMAIN} \
         --title="${WP_TITLE}" \
         --admin_user=${DB_ADMIN_NAME} \
         --admin_password=${DB_ADMIN_PWD} \
-        --admin_email=${DB_ADMIN_EMAIL} \
-        --allow-root
+        --admin_email=${DB_ADMIN_EMAIL}
 
-    wp user create ${DB_USER_NAME} ${DB_USER_NAME}@${DOMAIN} \
-        --role=author \
-        --user_pass=${DB_USER_PWD} \
-        --allow-root
+    wp plugin update --path="." --allow-root --all
+
+    wp user create --path=$WP_PATH --allow-root \
+        ${DB_USER_NAME} ${DB_USER_NAME}@${DOMAIN} --user_pass=${DB_USER_PWD} \
+        --role=author --porcelain
 fi
 
-mkdir -p /run/php
-exec php-fpm7.4 -F
+php-fpm7.4 -F
