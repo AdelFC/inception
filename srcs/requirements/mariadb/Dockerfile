@@ -1,13 +1,11 @@
-FROM debian:bullseye
+FROM debian:bookworm
 
 RUN apt-get update && \
     apt-get install -y mariadb-server && \
     apt-get clean && \
-    apt-get --yes --quiet autoremove --purge && \
     rm -rf /var/lib/apt/lists/*
 
-COPY --chmod=0755 ./tools/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY ./conf/50-server.cnf /etc/mysql/mariadb.conf.d/50-server.cnf
+COPY --chmod=0755 ./tools/entrypoint.sh /entrypoint.sh
 
-EXPOSE 3306
-
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+ENTRYPOINT ["/entrypoint.sh"]
