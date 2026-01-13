@@ -1,5 +1,6 @@
 # Environment
 srcs/.env
+.env
 
 # Secrets
 secrets/

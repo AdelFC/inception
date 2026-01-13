@@ -6,6 +6,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 COPY ./conf/50-server.cnf /etc/mysql/mariadb.conf.d/50-server.cnf
-COPY --chmod=0755 ./tools/entrypoint.sh /entrypoint.sh
+COPY ./tools/entrypoint.sh /entrypoint.sh
+RUN chmod 755 /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]

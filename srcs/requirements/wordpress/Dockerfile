@@ -7,6 +7,7 @@ RUN apt-get update && \
     mv wp-cli.phar /usr/local/bin/wp && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-COPY --chmod=0755 ./tools/entrypoint.sh /entrypoint.sh
+COPY ./tools/entrypoint.sh /entrypoint.sh
+RUN chmod 755 /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
