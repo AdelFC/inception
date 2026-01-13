@@ -72,15 +72,9 @@ clean:
 	@echo "$(YELLOW)Clean complete.$(RESET)"
 
 fclean: clean
-	@echo "$(BOLD_RED)Removing Docker volumes...$(RESET)"
-	@docker volume rm mariadb wordpress 2>/dev/null || true
-	@echo "$(BOLD_RED)Removing all data...$(RESET)"
-	@if [ -d "$(DATA_PATH)/mariadb" ] && [ "$$(ls -A $(DATA_PATH)/mariadb 2>/dev/null)" ]; then \
-		docker run --rm -v $(DATA_PATH)/mariadb:/data alpine sh -c "rm -rf /data/* /data/.[!.]* 2>/dev/null || true"; \
-	fi
-	@if [ -d "$(DATA_PATH)/wordpress" ] && [ "$$(ls -A $(DATA_PATH)/wordpress 2>/dev/null)" ]; then \
-		docker run --rm -v $(DATA_PATH)/wordpress:/data alpine sh -c "rm -rf /data/* /data/.[!.]* 2>/dev/null || true"; \
-	fi
+	@echo "$(BOLD_RED)Removing all Docker resources...$(RESET)"
+	@docker system prune -af --volumes
+	@sudo rm -rf $(DATA_PATH)
 	@rm -rf secrets srcs/.env
 	@echo "$(BOLD_RED)Full clean complete.$(RESET)"
 
